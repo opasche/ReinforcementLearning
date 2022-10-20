@@ -1,2 +1,4 @@
-# ReinforcementLearning
-Frameworks and toy examples for reinforcement learning tasks
+# Reinforcement Learning repository
+Frameworks and some toy examples I made for reinforcement learning tasks
+
+Work in progress...
