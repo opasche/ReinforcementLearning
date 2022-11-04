@@ -33,17 +33,18 @@ import matplotlib.pyplot as plt
 #For reproductibility of the report's results
 torch.manual_seed(1)
 
-def train(environement='CartPole-v0' ,n_episodes=10000, n_timesteps=500, 
+def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500, 
                 exploration_decay_rate = 0.001,
                 discount_rate = 0.999,
                 lr = 1e-3,
                 min_exploration_rate = 0.01,#0.001,
-                max_exploration_rate = 1):
+                max_exploration_rate = 1,
+                **kwarg):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    #create environment frozen lake
-    env = gym.make(environement)#.env
+    #create environment
+    env = gym.make(environement, **kwarg)#.env
     
     state_shape = env.observation_space.shape
     n_actions = env.action_space.n
@@ -73,26 +74,27 @@ def train(environement='CartPole-v0' ,n_episodes=10000, n_timesteps=500,
     #training of agent
     start_time = time.time()
     for episode in range(n_episodes):
-        state = env.reset()
+        state, info = env.reset()
         total_reward = 0
+        done = False
         for timestep in range(n_timesteps):
             
             #env.render()
             #print(observation)
+           
+            if done:
+                #print("Episode finished after {} timesteps".format(timestep + 1))
+                break
             
             action = agent.eps_greedy_action(state)
             #print(agent.greedy_eps)
-            new_state, reward, done, info = env.step(action)
+            new_state, reward, done, truncated, info = env.step(action)
             agent.store_experience(state, action, reward, new_state, done)
             agent.update_policy(episode)#, timestep)
             state = new_state
             
             # sum up the number of rewards after n episodes
             total_reward += reward
-           
-            if done:
-                #print("Episode finished after {} timesteps".format(timestep + 1))
-                break
         
         agent.update_target(episode)
         reward_list.append(total_reward)
@@ -114,12 +116,13 @@ def train(environement='CartPole-v0' ,n_episodes=10000, n_timesteps=500,
 
 
 
-def play(agent, environement='CartPole-v0', n_episodes=5, n_timesteps=1000, plot_rewards=False):
+def play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot_rewards=False,
+                **kwarg):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    #create environment frozen lake
-    env = gym.make(environement).env
+    #create environment
+    env = gym.make(environement, **kwarg).env
     
     state_shape = env.observation_space.shape
     n_actions = env.action_space.n
@@ -133,23 +136,24 @@ def play(agent, environement='CartPole-v0', n_episodes=5, n_timesteps=1000, plot
     #training of agent
     start_time = time.time()
     for episode in range(n_episodes):
-        state = env.reset()
+        state, info = env.reset()
         total_reward = 0
+        done = False
         for timestep in range(n_timesteps):
             
             env.render()
             #print(observation)
-            
-            action = agent.make_action(state)
-            new_state, reward, done, info = env.step(action)
-            state = new_state
-            
-            # sum up the number of rewards after n episodes
-            total_reward += reward
            
             if done:
                 #print("Episode finished after {} timesteps".format(timestep + 1))
                 break
+            
+            action = agent.make_action(state)
+            new_state, reward, done, truncated, info = env.step(action)
+            state = new_state
+            
+            # sum up the number of rewards after n episodes
+            total_reward += reward
         
         reward_list.append(total_reward)
         if ((episode+1)%100==0):
