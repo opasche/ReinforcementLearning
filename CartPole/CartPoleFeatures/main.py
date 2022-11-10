@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
+"""
+To use with the RLFramework (2022)
 
+@author: Olivier C. Pasche
+"""
 
 
 import numpy as np
@@ -32,7 +36,7 @@ import matplotlib.pyplot as plt
 
 
 
-#For reproductibility of the report's results
+# For reproductibility
 torch.manual_seed(1)
 
 def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500, 
@@ -88,8 +92,8 @@ def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500,
             action = agent.make_action(state) #agent.eps_greedy_action(state)
             #print(agent.greedy_eps)
             new_state, reward, done, truncated, info = env.step(action)
-            agent.store_experience(state, action, reward, new_state, done)
-            agent.update_policy(episode)#, timestep)
+            #agent.store_experience(state, action, reward, new_state, done)
+            agent.update_policy(state, new_state, reward, action, episode, done=False, t=timestep)
             state = new_state
             
             # sum up the number of rewards after n episodes

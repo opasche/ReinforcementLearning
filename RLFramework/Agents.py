@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
+"""
+Part of the RLFramework (2022)
+
+@author: Olivier C. Pasche
+"""
+
 
 import numpy as np
 import random
@@ -82,7 +88,7 @@ class Agent(object):
         return action
     
     
-    def update_policy(self, old_state, new_state, reward, action, episode, t=0):
+    def update_policy(self, old_state, new_state, reward, action, episode, done=False, t=0):
         raise NotImplementedError
     
     
@@ -90,6 +96,53 @@ class Agent(object):
         # update greedy eps
         self.greedy_eps = self.min_exploration_rate + (self.max_exploration_rate - self.min_exploration_rate) * np.exp(-self.exploration_decay_rate * episode)
     
+    
+    def train(self, env, n_episodes=10000, max_timesteps=500,
+              checkpoint_path="./", warm_start_weights=None, verbatim=1):
+        # Training proceidure with a gym-like environment.
+        if warm_start_weights:
+            self.load_weights(warm_start_weights)
+        
+        reward=None
+        
+        # create total reward
+        reward_list = []
+        
+        #training proceidure
+        start_time = time.time()
+        for episode in range(n_episodes):
+            state, info = env.reset()
+            total_reward = 0
+            done = False
+            for timestep in range(max_timesteps):
+                
+                #env.render()
+                #print(observation)
+               
+                if done:
+                    #print("Episode finished after {} timesteps".format(timestep + 1))
+                    break
+                
+                action = self.make_action(state) #self.eps_greedy_action(state)
+                #print(self.greedy_eps)
+                new_state, reward, done, truncated, info = env.step(action)
+                #self.store_experience(state, action, reward, new_state, done)
+                self.update_policy(state, new_state, reward, action, episode, done=False, t=timestep)
+                state = new_state
+                
+                # sum up the number of rewards after n episodes
+                total_reward += reward
+            
+            #self.update_target(episode)
+            reward_list.append(total_reward)
+            if ((episode+1)%100==0) and (verbatim>0):
+                print(f"---- Episodes {episode-98} to {episode+1} finished in {(time.time() - start_time):.2f} seconds ----")
+                start_time = time.time()
+            if ((episode+1)%1000==0):
+                self.save_weights(checkpoint_path+"DQN_cartpole_weights_traintemp_"+str(episode+1)+".pt")
+        
+        return(reward_list)
+        
     
 
 
@@ -130,7 +183,7 @@ class Q_agent(Agent):
     #     return super(Q_agent, self).make_action(observation=observation, exploit_only=exploit_only)
     
     
-    def update_policy(self, old_state, new_state, reward, action, episode, t=0):
+    def update_policy(self, old_state, new_state, reward, action, episode, done=False, t=0):
         self.Q[old_state,action] = (1-self.lr)*self.Q[old_state,action] + self.lr*(reward + self.discount_rate * np.max(self.Q[new_state, :]) )
         
         # update greedy eps
@@ -198,7 +251,8 @@ class DQNAgent(Agent):
                                           self.preprocessor.process(new_state), done)
     
     
-    def update_policy(self, episode):#, t=0
+    def update_policy(self, old_state, new_state, reward, action, episode, done=False, t=0):#, t=0
+        self.store_experience(old_state, action, reward, new_state, done)
         if (episode != self.last_episode):
             self.update_target(episode-1)
         #self.Q[old_state,action] = (1-self.lr)*self.Q[old_state,action] + self.lr*(reward + self.discount_rate * np.max(self.Q[new_state, :]) )

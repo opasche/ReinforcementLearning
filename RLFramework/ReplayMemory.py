@@ -1,5 +1,11 @@
-	#!/usr/bin/env python
+#!/usr/bin/env python
 # coding: utf-8
+"""
+Part of the RLFramework (2022)
+
+@author: Olivier C. Pasche
+"""
+
 import numpy as np
 import gym
 import random
