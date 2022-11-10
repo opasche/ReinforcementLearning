@@ -35,7 +35,11 @@ class ReplayMemory(object):
         
     
     
-    def add_experience(self, state, action, reward, new_state, done):
+    def add_experience(self, state, action, reward, new_state, done, preprocessor=None):
+        
+        if preprocessor is not None:
+            state = preprocessor.process(state)
+            new_state = preprocessor.process(new_state)
         
         if self.st is not None:
             

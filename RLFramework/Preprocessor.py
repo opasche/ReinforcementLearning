@@ -21,12 +21,35 @@ import copy
 
 
 
+
 class Preprocessor(object):
+    
+    def __init__(self):
+        super(Preprocessor, self).__init__()
+    
+    
+    def process(self, state):
+        return state
+    
+
+
+
+class TensorPreprocessor(Preprocessor):
     
     def __init__(self):
         super(Preprocessor, self).__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
+    
+    def process(self, state):
+        return torch.Tensor(state).view(1,-1)#.to(self.device)
+    
+
+
+class ImageDiffPreprocessor(TensorPreprocessor):
+    
+    def __init__(self):
+        super(Preprocessor, self).__init__()
     
     
     def get_state(self, old_image, new_image, done=False, initial_screen=False):
@@ -71,5 +94,9 @@ class Preprocessor(object):
         return resize(screen).unsqueeze(0)#.to(self.device) # add a batch dimension (BCHW)
     
     
-    
-    
+
+
+
+
+
+

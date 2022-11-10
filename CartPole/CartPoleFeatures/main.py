@@ -7,6 +7,7 @@ import numpy as np
 import gym
 import random
 import time
+import sys
 from IPython.display import clear_output
 import matplotlib.pyplot as plt
 
@@ -19,10 +20,11 @@ from torch import optim
 
 import math
 
-from DQNN import *
-from ReplayMemory import *
-from Preprocessor import *
-from DQNAgent import *
+sys.path.append('.../')
+from RLFramework.DQNN import *
+from RLFramework.ReplayMemory import *
+from RLFramework.Preprocessor import *
+from RLFramework.Agents import *
 
 get_ipython().run_line_magic('matplotlib', 'inline')
 import matplotlib.pyplot as plt
@@ -34,17 +36,14 @@ import matplotlib.pyplot as plt
 torch.manual_seed(1)
 
 def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500, 
-                exploration_decay_rate = 0.001,
-                discount_rate = 0.999,
-                lr = 1e-3,
-                min_exploration_rate = 0.01,#0.001,
-                max_exploration_rate = 1,
-                **kwarg):
+          discount_rate = 0.999, lr = 1e-3,
+          max_exploration_rate = 1, exploration_decay_rate = 0.001, min_exploration_rate = 0.01,#0.001,
+          warm_start=False, render_mode="rgb_array_list", **kwarg):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     #create environment
-    env = gym.make(environement, **kwarg)#.env
+    env = gym.make(environement, render_mode=render_mode, **kwarg)#.env
     
     state_shape = env.observation_space.shape
     n_actions = env.action_space.n
@@ -53,17 +52,17 @@ def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500,
     #Declare objects
     #NN = DQN_FC(state_shape[0], n_actions, 64, 32)#.to(device)
     NN = DQN_FC(state_shape[0], n_actions, 32, 24)#.to(device)
-    preprocessor = Preprocessor()
+    preprocessor = TensorPreprocessor()
     replay_memory = ReplayMemory(100000,256)
     
     
     #create agent
-    agent = DQNAgent(n_actions, exploration_decay_rate, 
-                     discount_rate, lr,
-                     min_exploration_rate, max_exploration_rate,
+    agent = DQNAgent(n_actions, discount_rate, lr,
+                     max_exploration_rate, exploration_decay_rate, min_exploration_rate, 
                      NN, preprocessor, replay_memory, target_update_lag=10)
     
-    agent.load_weights("DQN_cartpole_weights_last.pt")
+    if warm_start:
+        agent.load_weights("DQN_cartpole_weights_last.pt")
     
     reward=None
     
@@ -86,7 +85,7 @@ def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500,
                 #print("Episode finished after {} timesteps".format(timestep + 1))
                 break
             
-            action = agent.eps_greedy_action(state)
+            action = agent.make_action(state) #agent.eps_greedy_action(state)
             #print(agent.greedy_eps)
             new_state, reward, done, truncated, info = env.step(action)
             agent.store_experience(state, action, reward, new_state, done)
@@ -96,7 +95,7 @@ def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500,
             # sum up the number of rewards after n episodes
             total_reward += reward
         
-        agent.update_target(episode)
+        #agent.update_target(episode)
         reward_list.append(total_reward)
         if ((episode+1)%100==0):
             print(f"---- Episodes {episode-98} to {episode+1} finished in {(time.time() - start_time):.2f} seconds ----")
@@ -117,12 +116,12 @@ def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500,
 
 
 def play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot_rewards=False,
-                **kwarg):
+         render_mode="human", **kwarg):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     #create environment
-    env = gym.make(environement, **kwarg).env
+    env = gym.make(environement, render_mode=render_mode, **kwarg).env
     
     state_shape = env.observation_space.shape
     n_actions = env.action_space.n
@@ -148,7 +147,7 @@ def play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot
                 #print("Episode finished after {} timesteps".format(timestep + 1))
                 break
             
-            action = agent.make_action(state)
+            action = agent.make_action(state, exploit_only=True)
             new_state, reward, done, truncated, info = env.step(action)
             state = new_state
             
@@ -173,8 +172,11 @@ def play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot
 
 
 
-agent, reward_list = train(n_episodes=10000)
+agent, reward_list = train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500, 
+          discount_rate = 0.999, lr = 1e-3,
+          max_exploration_rate = 1, exploration_decay_rate = 0.001, min_exploration_rate = 0.01,#0.001,
+          warm_start=False, render_mode="rgb_array")
 agent.save_weights("DQN_cartpole_weights_last.pt")
 replay_memory = agent.replay_memory
-rew_play = play(agent, n_episodes=5)
+rew_play = play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot_rewards=False, render_mode="human")
 print(rew_play)
