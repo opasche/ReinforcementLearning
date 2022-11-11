@@ -30,7 +30,7 @@ from RLFramework.Preprocessor import *
 
 
 
-class Agent(object):
+class RLAgent(object):
     """Generic RL Agent (with default epsilon-greedy exploratory policy)."""
     
     def __init__(self, n_actions,
@@ -41,7 +41,7 @@ class Agent(object):
                  min_exploration_rate = 0.001,
                  preprocessor=Preprocessor()):
         
-        super(Agent, self).__init__()
+        super(RLAgent, self).__init__()
         
         self.n_actions = n_actions
         
@@ -97,13 +97,19 @@ class Agent(object):
         self.greedy_eps = self.min_exploration_rate + (self.max_exploration_rate - self.min_exploration_rate) * np.exp(-self.exploration_decay_rate * episode)
     
     
+    def save(self, filename, folder="./"):
+        raise NotImplementedError
+    
+    
+    def load(self, filename, folder="./"):
+        raise NotImplementedError
+    
+    
     def train(self, env, n_episodes=10000, max_timesteps=500,
-              checkpoint_path="./", warm_start_weights=None, verbatim=1):
+              checkpoint_path="./", warm_start_weights=None, verbatim=1, render_every=None):
         # Training proceidure with a gym-like environment.
         if warm_start_weights:
-            self.load_weights(warm_start_weights)
-        
-        reward=None
+            self.load(warm_start_weights)
         
         # create total reward
         reward_list = []
@@ -116,8 +122,10 @@ class Agent(object):
             done = False
             for timestep in range(max_timesteps):
                 
-                #env.render()
-                #print(observation)
+                if render_every:
+                    if episode%render_every==0:
+                        env.render()
+                        #print(observation)
                
                 if done:
                     #print("Episode finished after {} timesteps".format(timestep + 1))
@@ -133,21 +141,57 @@ class Agent(object):
                 # sum up the number of rewards after n episodes
                 total_reward += reward
             
-            #self.update_target(episode)
+            #self.update_target_network(episode)
             reward_list.append(total_reward)
             if ((episode+1)%100==0) and (verbatim>0):
                 print(f"---- Episodes {episode-98} to {episode+1} finished in {(time.time() - start_time):.2f} seconds ----")
                 start_time = time.time()
-            if ((episode+1)%1000==0):
-                self.save_weights(checkpoint_path+"DQN_cartpole_weights_traintemp_"+str(episode+1)+".pt")
+            if checkpoint_path:
+                if ((episode+1)%1000==0):
+                    self.save(checkpoint_path+"DQN_cartpole_weights_traintemp_"+str(episode+1)+".pt")
         
         return(reward_list)
+    
+    
+    def play(self, env, n_episodes=5, max_timesteps=1000, verbatim=1, render_every=1):
+        # create total reward
+        reward_list = []
         
+        #training proceidure
+        start_time = time.time()
+        for episode in range(n_episodes):
+            state, info = env.reset()
+            total_reward = 0
+            done = False
+            for timestep in range(max_timesteps):
+                
+                if render_every:
+                    if episode%render_every==0:
+                        env.render()
+                        #print(observation)
+               
+                if done:
+                    #print("Episode finished after {} timesteps".format(timestep + 1))
+                    break
+                
+                action = self.make_action(state, exploit_only=True)
+                new_state, reward, done, truncated, info = env.step(action)
+                state = new_state
+                
+                # sum up the number of rewards after n episodes
+                total_reward += reward
+            
+            reward_list.append(total_reward)
+            if ((episode+1)%100==0) and (verbatim>0):
+                print(f"---- Episodes {episode-98} to {episode+1} finished in {(time.time() - start_time):.2f} seconds ----")
+                start_time = time.time()
+        
+        return(reward_list)
     
 
 
 
-class Q_agent(Agent):
+class Q_agent(RLAgent):
     """Basic (one-step, off-policy, greedy) Q-learning with epsilon-greedy exploratory policy."""
     
     def __init__(self, n_states, n_actions,
@@ -189,10 +233,18 @@ class Q_agent(Agent):
         # update greedy eps
         self.update_greedy_eps(episode)
     
+    
+    def save(self, filename="Q_agent_table.npy", folder="./"):
+        np.save(folder+filename, self.Q)
+    
+    
+    def load(self, filename, folder="./"):
+        self.Q = np.load(folder+filename)
+    
 
 
-class nstep_Q_agent(Agent):
-    """Draft. n-step off-policy Sarsa sub optimal. n-step Q(sigma) A7.6 unifies: per decision with control (7.13)+(7.2) and Tree-backup A7.5. Eligibility traces improves efficiency of Q(sigma)."""
+class nstep_Q_agent(RLAgent):
+    """To Do. n-step off-policy Sarsa sub optimal. n-step Q(sigma) A7.6 unifies: per decision with control (7.13)+(7.2) and Tree-backup A7.5. Eligibility traces improves efficiency of Q(sigma)."""
     
     def __init__(self, n_states, n_actions, n_steps=1):
         
@@ -203,7 +255,7 @@ class nstep_Q_agent(Agent):
 
 
 
-class DQNAgent(Agent):
+class DQNAgent(RLAgent):
     """Deep Q-learning agent with policy and target networks, and epsilon-greedy policy."""
     
     def __init__(self, n_actions,
@@ -252,9 +304,21 @@ class DQNAgent(Agent):
     
     
     def update_policy(self, old_state, new_state, reward, action, episode, done=False, t=0):#, t=0
+        
         self.store_experience(old_state, action, reward, new_state, done)
+        
         if (episode != self.last_episode):
-            self.update_target(episode-1)
+            self.update_target_network(episode-1)
+        
+        self.update_policy_network()
+        
+        # update greedy eps
+        self.update_greedy_eps(episode)
+        
+        self.last_episode = episode
+    
+    
+    def update_policy_network(self):
         #self.Q[old_state,action] = (1-self.lr)*self.Q[old_state,action] + self.lr*(reward + self.discount_rate * np.max(self.Q[new_state, :]) )
         X, y, actions = self.replay_memory.make_batch(self.TargetNN, self.discount_rate)
         
@@ -267,14 +331,9 @@ class DQNAgent(Agent):
         loss.backward()
         self.optimizer.step()
         self.PolicyNN.eval()
-        
-        # update greedy eps
-        self.update_greedy_eps(episode)
-        
-        self.last_episode = episode
     
     
-    def update_target(self, epoch=None):
+    def update_target_network(self, epoch=None):
         
         if epoch:
             if((epoch+1)%self.target_update_lag == 0):
@@ -285,11 +344,11 @@ class DQNAgent(Agent):
             self.TargetNN.eval()
     
     
-    def save_weights(self, filename="DQN_cartpole_weights.pt", folder="model_weights/"):
+    def save(self, filename="DQN_weights.pt", folder="./"):
         torch.save(self.PolicyNN.state_dict(), folder+filename)
     
     
-    def load_weights(self, filename="DQN_cartpole_weights.pt", folder="model_weights/"):
+    def load(self, filename, folder="./"):
         self.PolicyNN.load_state_dict(torch.load(folder+filename))
         self.TargetNN.load_state_dict(torch.load(folder+filename))
         self.PolicyNN.eval()
