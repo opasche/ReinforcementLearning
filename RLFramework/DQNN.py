@@ -29,22 +29,26 @@ import copy
 # Model 1
 class DQN_FC(nn.Module):
     """
-    Fully connected network with two hidden layers.
-    Input parameters are the sizes of the layers (nb of neurons).
-    Takes as input data two channels images from MNIST and aims at finding which channel contains the largest digit.
+    Customizable fully connected feedforward pytorch neural network.
+    Input parameters are the input size, number of actions (output size) and a list of hidden layer sizes (nb of neurons).
     """
-    def __init__(self, input_size, nb_actions, nb_hidden_one, nb_hidden_two):
+    def __init__(self, input_size:int, nb_actions:int, Hidden_vect:list[int]=[32,32],
+                 activation=nn.ELU(alpha=1.0), p_drop=0):
         super(DQN_FC, self).__init__()
-        self.fc1 = nn.Linear(input_size, nb_hidden_one)
-        self.fc2 = nn.Linear(nb_hidden_one, nb_hidden_two)
-        self.fc3 = nn.Linear(nb_hidden_two, nb_actions)
-
-
+        self.activation = activation
+        self.dropout = nn.Dropout(p=p_drop)
+        
+        dims_in = [input_size] + Hidden_vect
+        
+        self.layers = nn.ModuleList([nn.Linear(dims_in[i], dout) for i, dout in enumerate(Hidden_vect)])
+        self.lin_out = nn.Linear(dims_in[-1], nb_actions)
+    
+    
     def forward(self, x):
-        x = F.elu(self.fc1(x),1.)
-        x = F.elu(self.fc2(x),1.)
-        x = self.fc3(x) #F.sigmoid(self.fc3(x))
-
+        for i, layer in enumerate(self.layers):
+            x = self.activation(layer(x))
+            x = self.dropout(x)
+        x = self.lin_out(x)
         return x
 
 
@@ -53,7 +57,6 @@ class DQN_Conv(nn.Module):
     """
     Network with two convolutions & poolings, then one fully conected hidden layer.
     Input parameters are the number of channels in the two convolutions and the fully connected layer size (nb of neurons).
-    Takes as input data two channels images from MNIST and aims at finding which channel contains the largest digit.
     """
     def __init__(self, input_channels, nb_actions, nb_channels_one, nb_channels_two, nb_hidden):
         super(DQN_Conv, self).__init__()

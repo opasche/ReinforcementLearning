@@ -54,16 +54,17 @@ def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500,
     
     
     #Declare objects
-    #NN = DQN_FC(state_shape[0], n_actions, 64, 32)#.to(device)
-    NN = DQN_FC(state_shape[0], n_actions, 32, 24)#.to(device)
+    #NN = DQN_FC(state_shape[0], n_actions, Hidden_vect=[64,32])#.to(device)
+    NN = DQN_FC(state_shape[0], n_actions, Hidden_vect=[32,32],
+                activation=nn.ELU(alpha=1.0), p_drop=0)#.to(device)
     preprocessor = TensorPreprocessor()
     replay_memory = ReplayMemory(100000,256)
     
     
     #create agent
-    agent = DQNAgent(n_actions, discount_rate, lr,
+    agent = DQNAgent(n_actions, NN, discount_rate, lr,
                      max_exploration_rate, exploration_decay_rate, min_exploration_rate, 
-                     NN, preprocessor, replay_memory, target_update_lag=10)
+                     preprocessor, replay_memory, target_update_lag=10)
     
     reward_list = agent.train(env, n_episodes=n_episodes, max_timesteps=n_timesteps,
                               checkpoint_path="./model_weights/checkpoints_last/",

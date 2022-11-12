@@ -88,13 +88,13 @@ class RLAgent(object):
         return action
     
     
-    def update_policy(self, old_state, new_state, reward, action, episode, done=False, t=0):
-        raise NotImplementedError
-    
-    
     def update_greedy_eps(self, episode):
         # update greedy eps
         self.greedy_eps = self.min_exploration_rate + (self.max_exploration_rate - self.min_exploration_rate) * np.exp(-self.exploration_decay_rate * episode)
+    
+    
+    def update_policy(self, old_state, new_state, reward, action, episode, done=False, t=0):
+        raise NotImplementedError
     
     
     def save(self, filename, folder="./"):
@@ -258,10 +258,10 @@ class nstep_Q_agent(RLAgent):
 class DQNAgent(RLAgent):
     """Deep Q-learning agent with policy and target networks, and epsilon-greedy policy."""
     
-    def __init__(self, n_actions,
+    def __init__(self, n_actions, NN=None,
                  discount_rate = 0.999, lr = 1e-3,
                  max_exploration_rate = 1, exploration_decay_rate = 0.001, min_exploration_rate = 0.01, 
-                 NN=None, preprocessor=TensorPreprocessor(), replay_memory=ReplayMemory(100000,256), target_update_lag=10):
+                 preprocessor=TensorPreprocessor(), replay_memory=ReplayMemory(100000,256), target_update_lag=10):
         
         super(DQNAgent, self).__init__(n_actions=n_actions,
                                        discount_rate = discount_rate, lr = lr,
