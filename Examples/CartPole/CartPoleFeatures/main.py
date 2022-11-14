@@ -40,9 +40,9 @@ import matplotlib.pyplot as plt
 torch.manual_seed(1)
 
 def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500, 
-          discount_rate = 0.999, lr = 1e-3,
+          Hidden_vect=[32,32], discount_rate = 0.999, lr = 1e-3,
           max_exploration_rate = 1, exploration_decay_rate = 0.001, min_exploration_rate = 0.01,#0.001,
-          warm_start_weights=None, render_mode="rgb_array_list", **kwarg):
+          warm_start_path=None, render_mode="rgb_array_list", **kwarg):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -54,8 +54,7 @@ def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500,
     
     
     #Declare objects
-    #NN = DQN_FC(state_shape[0], n_actions, Hidden_vect=[64,32])#.to(device)
-    NN = DQN_FC(state_shape[0], n_actions, Hidden_vect=[32,32],
+    NN = DQN_FC(state_shape[0], n_actions, Hidden_vect=Hidden_vect,
                 activation=nn.ELU(alpha=1.0), p_drop=0)#.to(device)
     preprocessor = TensorPreprocessor()
     replay_memory = ReplayMemory(100000,256)
@@ -68,7 +67,7 @@ def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500,
     
     reward_list = agent.train(env, n_episodes=n_episodes, max_timesteps=n_timesteps,
                               checkpoint_path="./model_weights/checkpoints_last/",
-                              warm_start_weights=warm_start_weights, verbatim=1, render_every=None)
+                              warm_start_path=warm_start_path, verbatim=1, render_every=None)
     
     env.close()
     
@@ -110,9 +109,9 @@ def play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot
 
 
 agent, reward_list = train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500, 
-          discount_rate = 0.999, lr = 1e-3,
-          max_exploration_rate = 1, exploration_decay_rate = 0.001, min_exploration_rate = 0.01,#0.001,
-          warm_start_weights=None, render_mode="rgb_array")
+                           Hidden_vect=[32,32], discount_rate = 0.999, lr = 1e-3,
+                           max_exploration_rate = 1, exploration_decay_rate = 0.001, min_exploration_rate = 0.01,#0.001,
+                           warm_start_path=None, render_mode="rgb_array")
 agent.save("model_weights/DQN_cartpole_weights_last.pt")
 replay_memory = agent.replay_memory
 rew_play = play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot_rewards=False, render_mode="human")
