@@ -108,11 +108,18 @@ def play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot
 
 
 
-agent, reward_list = train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500, 
-                           Hidden_vect=[32,32], discount_rate = 0.999, lr = 1e-3,
+agent, reward_list = train(environement='CartPole-v1', n_episodes=5000, n_timesteps=500, 
+                           Hidden_vect=[32,24], discount_rate = 0.999, lr = 1e-3,
                            max_exploration_rate = 1, exploration_decay_rate = 0.001, min_exploration_rate = 0.01,#0.001,
                            warm_start_path=None, render_mode="rgb_array")
 agent.save("model_weights/DQN_cartpole_weights_last.pt")
 replay_memory = agent.replay_memory
+
+#agent.load("model_weights/DQN_cartpole_weights_best_32_24.pt")
+
 rew_play = play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot_rewards=False, render_mode="human")
 print(rew_play)
+
+
+
+

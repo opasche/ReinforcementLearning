@@ -136,7 +136,7 @@ class RLAgent(object):
                 #print(self.greedy_eps)
                 new_state, reward, done, truncated, info = env.step(action)
                 #self.store_experience(state, action, reward, new_state, done)
-                self.update_policy(state, new_state, reward, action, episode, done=False, t=timestep)
+                self.update_policy(state, new_state, reward, action, episode, done=done, t=timestep)
                 state = new_state
                 
                 # sum up the number of rewards after n episodes
@@ -145,7 +145,7 @@ class RLAgent(object):
             #self.update_target_network(episode)
             reward_list.append(total_reward)
             if ((episode+1)%100==0) and (verbatim>0):
-                print(f"---- Episodes {episode-98} to {episode+1} finished in {(time.time() - start_time):.2f} seconds ----")
+                print(f"---- Episodes {episode-98} to {episode+1} finished in {(time.time() - start_time):.2f} sec. with ave. reward: {np.mean(reward_list[(-99):]):.2f}. ----")
                 start_time = time.time()
             if checkpoint_path:
                 if ((episode+1)%1000==0):
