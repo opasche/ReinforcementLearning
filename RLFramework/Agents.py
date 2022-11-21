@@ -248,8 +248,9 @@ class Q_agent(RLAgent):
     
 
 
-class nstep_Q_agent(RLAgent):
-    """Draft. n-step off-policy Sarsa sub optimal. n-step Q(sigma) A7.6 unifies: per decision with control (7.13)+(7.2) and Tree-backup A7.5. Eligibility traces improves efficiency of Q(sigma)."""
+class nstep_Q_agent(Q_agent):
+    """Draft. Gereralizes the Q-agent to n-step updates. Also known as n-step Tree-backup (Q-learning) Algorithm."""
+    #n-step off-policy Sarsa sub optimal. n-step Q(sigma) A7.6 unifies: per decision with control (7.13)+(7.2) and Tree-backup A7.5. Eligibility traces improves efficiency of Q(sigma).
     
     def __init__(self, n_states, n_actions, n_steps=1,
                  discount_rate = 0.99,
@@ -259,33 +260,18 @@ class nstep_Q_agent(RLAgent):
                  min_exploration_rate = 0.001,
                  preprocessor=Preprocessor()):
         
-        super(nstep_Q_agent, self).__init__(n_actions=n_actions,
+        super(nstep_Q_agent, self).__init__(n_states=n_states, n_actions=n_actions,
                      discount_rate = discount_rate, lr = lr,
                      max_exploration_rate = max_exploration_rate,
                      exploration_decay_rate = exploration_decay_rate, 
                      min_exploration_rate = min_exploration_rate,
                      preprocessor=preprocessor)
         
-        self.n_states = n_states
         self.n_steps = n_steps
-        
-        # initiliaze all Q-table values to 0
-        self.reset_Q()
-    
-    
-    def reset_Q(self):
-        self.Q = np.zeros((self.n_states, self.n_actions))
-    
-    
-    def exploit(self, state):
-        return np.random.choice(np.argwhere(self.Q[state, :]==np.max(self.Q[state, :])).reshape(-1,))
-    
-    
-    # def make_action(self, observation, exploit_only=False):
-    #     return super(Q_agent, self).make_action(observation=observation, exploit_only=exploit_only)
     
     
     def update_policy(self, old_state, new_state, reward, action, episode, done=False, t=0):
+        raise NotImplementedError("nstep_Q_agent: Draft, not tested yet.")
         if t==0:
             self.smem = (self.n_steps-1) * [None] + [old_state]#St
             self.amem = self.n_steps * [None]
@@ -324,19 +310,6 @@ class nstep_Q_agent(RLAgent):
         
         # update greedy eps
         self.update_greedy_eps(episode)
-    
-    
-    def save(self, filename="Q_agent_table.npy", folder="./"):
-        ext = "" if filename[-4:]==".npy" else ".npy"
-        save_path = folder+filename+ext
-        if not os.path.isdir(os.path.dirname(save_path)):
-            os.makedirs(os.path.dirname(save_path))
-        np.save(save_path, self.Q)
-    
-    
-    def load(self, filename, folder="./"):
-        self.Q = np.load(folder+filename)
-        
         
 
 
