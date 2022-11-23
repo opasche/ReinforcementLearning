@@ -28,6 +28,7 @@ sys.path.append('../../../')
 from RLFramework.DQNN import *
 from RLFramework.ReplayMemory import *
 from RLFramework.Preprocessor import *
+from RLFramework.EnvWrappers import *
 from RLFramework.Agents import *
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -48,6 +49,7 @@ def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=500,
     
     #create environment
     env = gym.make(environement, render_mode=render_mode, **kwarg)#.env
+    env = DoneRewardWrapper(env, done_reward=-1.0)
     
     state_shape = env.observation_space.shape
     n_actions = env.action_space.n
@@ -87,7 +89,8 @@ def play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     #create environment
-    env = gym.make(environement, render_mode=render_mode, **kwarg).env
+    env = gym.make(environement, render_mode=render_mode, **kwarg)#.env
+    env = DoneRewardWrapper(env, done_reward=-1.0)
     
     state_shape = env.observation_space.shape
     n_actions = env.action_space.n
@@ -117,7 +120,7 @@ replay_memory = agent.replay_memory
 
 #agent.load("model_weights/DQN_cartpole_weights_best_32_24.pt")
 
-rew_play = play(agent, environement='CartPole-v1', n_episodes=5, n_timesteps=1000, plot_rewards=False, render_mode="human")
+rew_play = play(agent, environement='CartPole-v1', n_episodes=3, n_timesteps=1000, plot_rewards=False, render_mode="human")
 print(rew_play)
 
 

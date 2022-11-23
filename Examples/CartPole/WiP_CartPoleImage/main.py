@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 #For reproductibility of the report's results
 torch.manual_seed(1)
 
-def train(environement='CartPole-v0' ,n_episodes=10000, n_timesteps=int(1e6), 
+def train(environement='CartPole-v1', n_episodes=10000, n_timesteps=int(1e6), 
                 exploration_decay_rate = 0.001,
                 discount_rate = 0.999,
                 lr = 1e-3,
@@ -69,7 +69,7 @@ def train(environement='CartPole-v0' ,n_episodes=10000, n_timesteps=int(1e6),
     #training of agent
     start_time = time.time()
     for episode in range(n_episodes):
-        state = env.reset()
+        state, info = env.reset()
         new_image = env.render('rgb_array')#, close=True)
         old_image = new_image
         state = preprocessor.get_state(new_image, new_image, done = False, initial_screen=True)
@@ -81,7 +81,7 @@ def train(environement='CartPole-v0' ,n_episodes=10000, n_timesteps=int(1e6),
             
             action = agent.eps_greedy_action(state)
             #print(agent.greedy_eps)
-            _, reward, done, info = env.step(action)
+            _, reward, done, truncated, info = env.step(action)
             new_image = env.render('rgb_array')#, close=True)
             new_state = preprocessor.get_state(old_image, new_image, done, initial_screen=False)
             agent.store_experience(state, action, reward, new_state, done)
@@ -116,7 +116,7 @@ def train(environement='CartPole-v0' ,n_episodes=10000, n_timesteps=int(1e6),
 
 
 
-def play(agent, environement='CartPole-v0', n_episodes=10, n_timesteps=int(1e6), plot_rewards=False):
+def play(agent, environement='CartPole-v1', n_episodes=10, n_timesteps=int(1e6), plot_rewards=False):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -135,7 +135,7 @@ def play(agent, environement='CartPole-v0', n_episodes=10, n_timesteps=int(1e6),
     #training of agent
     start_time = time.time()
     for episode in range(n_episodes):
-        state = env.reset()
+        state, info = env.reset()
         new_image = env.render('rgb_array')
         old_image = new_image
         state = preprocessor.get_state(new_image, new_image, done = False, initial_screen=True)
@@ -146,7 +146,7 @@ def play(agent, environement='CartPole-v0', n_episodes=10, n_timesteps=int(1e6),
             #print(observation)
             
             action = agent.make_action(state)
-            _, reward, done, info = env.step(action)
+            _, reward, done, truncated, info = env.step(action)
             new_image = env.render('rgb_array')
             new_state = preprocessor.get_state(old_image, new_image, done, initial_screen=False)
             state = new_state

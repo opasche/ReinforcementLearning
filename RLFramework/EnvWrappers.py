@@ -27,27 +27,51 @@ import copy
 
 
 
-class EnvWrapper(object):
+class EnvWrapper(gym.Wrapper):
     
     def __init__(self, env):
-        super(EnvWrapper, self).__init__()
+        super(EnvWrapper, self).__init__(env)
         self.env = env
         self.action_space = env.action_space
         self.observation_space = env.observation_space
-    
-    
-    def reset(self):
-        return self.env.reset()
+        self.reward_range = env.reward_range
     
     
     def step(self, action):
         return self.env.step(action)
     
     
-    def render(self, state):
-        self.env.render()
+    def reset(self):
+        return self.env.reset()
     
     
-    def close(self, state):
+    def render(self, *args, **kwargs):
+        return self.env.render(*args, **kwargs)
+    
+    
+    def close(self):
         self.env.close()
     
+
+
+class DoneRewardWrapper(EnvWrapper):
+    
+    def __init__(self, env, done_reward):
+        super(DoneRewardWrapper, self).__init__(env)
+        self.done_reward = done_reward
+    
+    def step(self, action):
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        if terminated:
+            reward = self.done_reward
+        return observation, reward, terminated, truncated, info
+
+
+
+
+
+
+
+
+
+

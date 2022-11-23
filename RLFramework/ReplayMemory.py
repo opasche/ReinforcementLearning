@@ -83,8 +83,7 @@ class ReplayMemory(object):
         X = self.st[inds]
         
         y = self.rtp1[inds] + discount_rate*TargetNN(self.stp1[inds]).max(1).values
-        y[self.is_done[inds]] = 0.
-        #y[self.is_done[inds]] = self.rtp1[self.is_done[inds]]
+        y[self.is_done[inds]] = self.rtp1[inds][self.is_done[inds]]
         
         actions = self.at[inds].long()
             
